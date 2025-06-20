@@ -1,0 +1,56 @@
+[
+    {
+      "id": "1",
+      "whitePlayer": "Magnus Carlsen",
+      "blackPlayer": "Hikaru Nakamura",
+      "result": "1-0",
+      "date": "2023-06-10T14:00:00Z",
+      "opening": "Sicilian Defense",
+      "duration": "00:45:32"
+    },
+    {
+      "id": "2",
+      "whitePlayer": "Fabiano Caruana",
+      "blackPlayer": "Levon Aronian",
+      "result": "0-1",
+      "date": "2023-05-08T16:30:00Z",
+      "opening": "King's Indian Defense",
+      "duration": "01:10:21"
+    },
+    {
+      "id": "3",
+      "whitePlayer": "Garry Kasparov",
+      "blackPlayer": "Vladimir Kramnik",
+      "result": "1/2-1/2",
+      "date": "2023-04-30T09:15:00Z",
+      "opening": "Queen's Gambit",
+      "duration": "00:55:42"
+    },
+    {
+      "id": "4",
+      "whitePlayer": "Viswanathan Anand",
+      "blackPlayer": "Bobby Fischer",
+      "result": "1-0",
+      "date": "2023-03-20T11:00:00Z",
+      "opening": "Ruy Lopez",
+      "duration": "01:20:15"
+    },
+    {
+      "id": "5",
+      "whitePlayer": "Anatoly Karpov",
+      "blackPlayer": "Vassily Smyslov",
+      "result": "0-1",
+      "date": "2023-02-15T13:45:00Z",
+      "opening": "French Defense",
+      "duration": "00:50:30"
+    },
+    {
+      "id": "6",
+      "whitePlayer": "Garry Kasparov",
+      "blackPlayer": "Boris Spassky",
+      "result": "1-0",
+      "date": "2023-01-10T15:30:00Z",
+      "opening": "Queen's Gambit",
+      "duration": "01:15:45"
+    }
+  ]
