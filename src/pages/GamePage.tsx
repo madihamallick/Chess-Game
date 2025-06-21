@@ -1,241 +1,390 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
-import { Chessboard } from "react-chessboard";
-import { Chess } from "chess.js";
-import { detectOpening } from "../utils/detectOpening.ts";
+"use client"
 
-const App: React.FC = () => {
-  const { id } = useParams();
-  const gameId = id || "1";
+import type React from "react"
+import { useState } from "react"
+import { useParams } from "react-router-dom"
+import { Chessboard } from "react-chessboard"
+import { Chess } from "chess.js"
+import { detectOpening } from "../utils/detectOpening.ts"
+import GameTimer from "../components/GameTimer"
+import MoveHistory from "../components/MoveHistory"
+import EnhancedChat from "../components/EnhancedChat"
+import { ArrowLeft, Settings, Flag, RotateCcw, Handshake, Crown, Star, Zap, Trophy } from "lucide-react"
 
-  const [game, setGame] = useState(new Chess());
-  const [winner, setWinner] = useState<string | null>(null);
-  const [gameOver, setGameOver] = useState(false);
-  const [openingName, setOpeningName] = useState<string>("");
-  const [playerMode, setPlayerMode] = useState<"human" | "computer">(
-    "computer"
-  );
+const GamePage: React.FC = () => {
+  const { id } = useParams()
+  const gameId = id || "1"
 
-  const [chatMessages, setChatMessages] = useState<
-    { sender: string; text: string }[]
-  >([]);
-  const [chatInput, setChatInput] = useState("");
+  const [game, setGame] = useState(new Chess())
+  const [winner, setWinner] = useState<string | null>(null)
+  const [gameOver, setGameOver] = useState(false)
+  const [openingName, setOpeningName] = useState<string>("")
+  const [playerMode, setPlayerMode] = useState<"human" | "computer">("computer")
+  const [gameStarted, setGameStarted] = useState(false)
+  const [playerTurn, setPlayerTurn] = useState<"white" | "black">("white")
+  const [moveHistory, setMoveHistory] = useState<any[]>([])
+  const [currentMoveIndex, setCurrentMoveIndex] = useState(-1)
+  const [showGameOverModal, setShowGameOverModal] = useState(false)
 
-  function safeGameMutate(modify) {
+  const [chatMessages, setChatMessages] = useState([
+    {
+      id: "1",
+      sender: "System",
+      text: "Game started! Good luck!",
+      timestamp: new Date(),
+      type: "system" as const,
+    },
+  ])
+
+  function safeGameMutate(modify: (game: Chess) => void) {
     setGame((g) => {
-      const update = { ...g };
-      modify(update);
-      return update;
-    });
+      const update = new Chess(g.fen())
+      modify(update)
+      return update
+    })
   }
 
   function makeRandomMove() {
-    const possibleMoves = game.moves();
+    const possibleMoves = game.moves()
 
     if (game.game_over() || game.in_draw() || possibleMoves.length === 0) {
-      setGameOver(true);
-      const winner = game.turn() === "w" ? "Black" : "White";
-      setWinner(winner);
-      return;
+      handleGameEnd()
+      return
     }
 
-    const randomIndex = Math.floor(Math.random() * possibleMoves.length);
+    const randomIndex = Math.floor(Math.random() * possibleMoves.length)
     safeGameMutate((game) => {
-      game.move(possibleMoves[randomIndex]);
-    });
+      game.move(possibleMoves[randomIndex])
+    })
+
+    setPlayerTurn(game.turn() === "w" ? "white" : "black")
+    updateMoveHistory()
   }
 
   function onDrop(source: string, target: string) {
-    if (gameOver) return false;
+    if (gameOver) return false
 
-    let move: any = null;
+    let move: any = null
     safeGameMutate((g) => {
-      // optionally includes a promotion to a queen (promotion: "q"). This is common in chess when a pawn reaches the opposite end of the board and can be promoted.
-      move = g.move({ from: source, to: target, promotion: "q" });
-    });
+      move = g.move({ from: source, to: target, promotion: "q" })
+    })
 
-    if (move === null) return false;
+    if (move === null) return false
 
-    const moves = game.history();
-    setOpeningName(detectOpening(moves));
+    if (!gameStarted) setGameStarted(true)
 
-    if (playerMode === "computer") {
-      setTimeout(makeRandomMove, 200);
+    setPlayerTurn(game.turn() === "w" ? "white" : "black")
+    updateMoveHistory()
+
+    const moves = game.history()
+    setOpeningName(detectOpening(moves))
+
+    if (game.game_over()) {
+      handleGameEnd()
+      return true
     }
 
-    return true;
+    if (playerMode === "computer") {
+      setTimeout(makeRandomMove, 500)
+    }
+
+    return true
+  }
+
+  function updateMoveHistory() {
+    const history = game.history({ verbose: true })
+    const formattedMoves = []
+
+    for (let i = 0; i < history.length; i += 2) {
+      const moveNumber = Math.floor(i / 2) + 1
+      const whiteMove = history[i]
+      const blackMove = history[i + 1]
+
+      formattedMoves.push({
+        moveNumber,
+        white: whiteMove?.san || "",
+        black: blackMove?.san || "",
+        evaluation: Math.random() * 4 - 2, // Mock evaluation
+      })
+    }
+
+    setMoveHistory(formattedMoves)
+    setCurrentMoveIndex(formattedMoves.length - 1)
+  }
+
+  function handleGameEnd() {
+    setGameOver(true)
+    setGameStarted(false)
+
+    let result = "Draw"
+    if (game.in_checkmate()) {
+      result = game.turn() === "w" ? "Black wins!" : "White wins!"
+    } else if (game.in_stalemate()) {
+      result = "Stalemate - Draw!"
+    } else if (game.insufficient_material()) {
+      result = "Insufficient material - Draw!"
+    }
+
+    setWinner(result)
+    setShowGameOverModal(true)
+
+    // Add system message
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        sender: "System",
+        text: `Game Over: ${result}`,
+        timestamp: new Date(),
+        type: "system" as const,
+      },
+    ])
   }
 
   function restartGame() {
-    const newGame = new Chess();
-    setGame(newGame);
-    setGameOver(false);
-    setWinner(null);
-    setOpeningName("");
+    const newGame = new Chess()
+    setGame(newGame)
+    setGameOver(false)
+    setGameStarted(false)
+    setWinner(null)
+    setOpeningName("")
+    setPlayerTurn("white")
+    setMoveHistory([])
+    setCurrentMoveIndex(-1)
+    setShowGameOverModal(false)
+  }
+
+  function handleTimeUp() {
+    const winner = playerTurn === "white" ? "Black wins on time!" : "White wins on time!"
+    setWinner(winner)
+    setGameOver(true)
+    setShowGameOverModal(true)
+  }
+
+  function handleSendMessage(message: string) {
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        sender: "You",
+        text: message,
+        timestamp: new Date(),
+        type:
+          message.length === 1 &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(message)
+            ? ("emoji" as const)
+            : ("message" as const),
+      },
+    ])
   }
 
   return (
-    <div>
-      <button
-        onClick={() => {
-          window.location.href = "/dashboard";
-        }}
-        className="px-4 py-1 text-sm h-10 my-3 mx-10 bg-white text-gray-800 rounded-lg hover:bg-gray-600 border-2 border-gray-400 hover:text-white transition-colors duration-300 cursor-pointer"
-      >
-        Dashboard
-      </button>
-      <h1 className="text-3xl font-bold mb-4 text-center">
-        Let's Play Game #{gameId} 🚀
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => (window.location.href = "/dashboard")}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Dashboard</span>
+              </button>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <h1 className="text-xl font-bold text-gray-800">Game #{gameId}</h1>
+            </div>
 
-      <div className="flex justify-center my-10">
-        <div className="flex items-center">
-          <label className="mr-4 font-semibold text-sm text-gray-700">
-            Mode
-          </label>
-          <div className="relative">
-            <input
-              type="checkbox"
-              id="toggle"
-              className="hidden"
-              checked={playerMode === "computer"}
-              onChange={() =>
-                setPlayerMode(playerMode === "human" ? "computer" : "human")
-              }
-            />
-            <label
-              htmlFor="toggle"
-              className="flex items-center cursor-pointer"
-            >
-              <div className="relative">
-                <div
-                  className={`block w-14 h-8 rounded-full transition-colors duration-300 ${
-                    playerMode === "computer" ? "bg-gray-500" : "bg-gray-300"
-                  }`}
-                ></div>
-                <div
-                  className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 ${
-                    playerMode === "computer" ? "translate-x-6" : ""
-                  }`}
-                ></div>
-              </div>
-              <span className="ml-3 text-sm font-medium text-gray-700">
-                {playerMode === "human"
-                  ? "Play with Human"
-                  : "Play with Computer"}
-              </span>
-            </label>
+            <div className="flex items-center space-x-4">
+              {openingName && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                  <Crown className="w-4 h-4" />
+                  <span>{openingName}</span>
+                </div>
+              )}
+              <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 max-w-screen-xl mx-auto px-4 md:mt-6">
-        {/* Chessboard */}
-        <div className="w-full">
-          <div className="relative flex justify-center items-center min-h-[400px]">
-            <Chessboard
-              position={game.fen()}
-              onPieceDrop={onDrop}
-              customBoardStyle={{
-                borderRadius: "4px",
-                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.3)",
-              }}
-              customDarkSquareStyle={{ backgroundColor: "gray" }}
-              customLightSquareStyle={{ backgroundColor: "#edeed1" }}
-            />
-            {gameOver && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white z-10">
-                <p className="text-xl font-bold">Game Over</p>
-                <p className="text-lg">Winner: {winner}</p>
-                <p className="text-sm">Press Enter to restart</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Move List */}
-        <div className="w-full xl:ml-18">
-          <div className="bg-gray-100 rounded-lg shadow-md p-4 h-full">
-            <h2 className="text-2xl font-bold mb-4 text-center">Move List</h2>
-            <div className="space-y-3 text-base">
-              <p>Current Turn: {game.turn() === "w" ? "White" : "Black"}</p>
-              <p>Total Moves: {game.history().length}</p>
-              {/* In chess.js, the load_pgn() function is used to load a game's moves from a string formatted in Portable Game Notation (PGN) */}
-              <p className="break-words">PGN: {game.pgn()}</p>
-              <p>FEN: {game.fen().split("-")[1]}</p>
-              <p>Status: {gameOver ? "Game Over" : "In Progress"}</p>
-              <p>Winner: {winner || "None"}</p>
-              <p className="font-semibold">Opening: {openingName || ""}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Chat + Controls */}
-        <div className="w-full xl:ml-16">
-          <div className="bg-gray-100 rounded-lg shadow-md p-4 flex flex-col h-full justify-between">
-            <div>
-              <h2 className="text-2xl font-bold mb-4 text-center">Chat</h2>
-              <div className="p-4 border rounded-lg bg-gray-50 mb-4 max-h-48 overflow-y-auto space-y-2">
-                {chatMessages.map((msg, idx) => (
-                  <p key={idx} className="text-sm">
-                    <strong>{msg.sender}:</strong> {msg.text}
-                  </p>
-                ))}
-              </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (chatInput.trim()) {
-                    setChatMessages((prev) => [
-                      ...prev,
-                      { sender: "Player", text: chatInput },
-                    ]);
-                    setChatInput("");
-                  }
-                }}
-                className="flex space-x-2 mb-6"
-              >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Game Mode Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white rounded-2xl p-2 shadow-sm">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-semibold text-gray-700">Game Mode:</span>
+              <div className="relative">
                 <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                  type="checkbox"
+                  id="mode-toggle"
+                  className="hidden"
+                  checked={playerMode === "computer"}
+                  onChange={() => setPlayerMode(playerMode === "human" ? "computer" : "human")}
                 />
+                <label htmlFor="mode-toggle" className="flex items-center cursor-pointer">
+                  <div className="relative">
+                    <div
+                      className={`block w-14 h-8 rounded-full transition-colors duration-300 ${
+                        playerMode === "computer" ? "bg-blue-500" : "bg-gray-300"
+                      }`}
+                    ></div>
+                    <div
+                      className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 ${
+                        playerMode === "computer" ? "translate-x-6" : ""
+                      }`}
+                    ></div>
+                  </div>
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    {playerMode === "human" ? "vs Human" : "vs Computer"}
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          {/* Left Sidebar - Timer & Controls */}
+          <div className="xl:col-span-3 space-y-6">
+            <GameTimer
+              initialTime={600} // 10 minutes
+              isActive={gameStarted && !gameOver}
+              onTimeUp={handleTimeUp}
+              playerTurn={playerTurn}
+            />
+
+            {/* Game Controls */}
+            <div className="bg-white rounded-2xl p-4 shadow-lg">
+              <h3 className="font-semibold text-gray-800 mb-4">Game Controls</h3>
+              <div className="grid grid-cols-2 gap-3">
                 <button
-                  type="submit"
-                  className="px-4 text-sm py-2 bg-white text-gray rounded-lg hover:bg-gray-600 border-2 border-gray-600 hover:text-white transition-colors duration-300 cursor-pointer"
+                  onClick={restartGame}
+                  className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
                 >
-                  Send
+                  <RotateCcw className="w-4 h-4" />
+                  <span>New Game</span>
                 </button>
-              </form>
+                <button
+                  onClick={() => alert("Draw offered!")}
+                  className="flex items-center justify-center space-x-2 px-4 py-3 bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600 transition-colors"
+                >
+                  <Handshake className="w-4 h-4" />
+                  <span>Offer Draw</span>
+                </button>
+                <button
+                  onClick={() => alert("Game resigned!")}
+                  className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors col-span-2"
+                >
+                  <Flag className="w-4 h-4" />
+                  <span>Resign</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex justify-around">
-              <button
-                onClick={restartGame}
-                className="px-2 text-sm py-2 h-10 mx-1 bg-white text-gray rounded-lg hover:bg-gray-600 border-2 border-gray-600 hover:text-white transition-colors duration-300 cursor-pointer"
-              >
-                Restart Game
-              </button>
-              <button
-                onClick={() => alert("Draw offered!")}
-                className="px-2 text-sm py-2 h-10 mx-1 bg-white text-gray rounded-lg hover:bg-gray-600 border-2 border-gray-600 hover:text-white transition-colors duration-300 cursor-pointer"
-              >
-                Offer Draw
-              </button>
-              <button
-                onClick={() => alert("Game resigned!")}
-                className="px-2 text-sm py-2 h-10 mx-1 bg-white text-gray rounded-lg hover:bg-gray-600 border-2 border-gray-600 hover:text-white transition-colors duration-300 cursor-pointer"
-              >
-                Resign Game
-              </button>
+            {/* Game Stats */}
+            <div className="bg-white rounded-2xl p-4 shadow-lg">
+              <h3 className="font-semibold text-gray-800 mb-4">Game Stats</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Current Turn:</span>
+                  <span className="font-semibold capitalize">{playerTurn}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Moves:</span>
+                  <span className="font-semibold">{game.history().length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className={`font-semibold ${gameOver ? "text-red-600" : "text-green-600"}`}>
+                    {gameOver ? "Game Over" : "In Progress"}
+                  </span>
+                </div>
+                {winner && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Result:</span>
+                    <span className="font-semibold text-blue-600">{winner}</span>
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Center - Chessboard */}
+          <div className="xl:col-span-6">
+            <div className="bg-white rounded-2xl p-6 shadow-lg">
+              <div className="relative">
+                <Chessboard
+                  position={game.fen()}
+                  onPieceDrop={onDrop}
+                  customBoardStyle={{
+                    borderRadius: "12px",
+                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+                  }}
+                  customDarkSquareStyle={{ backgroundColor: "#4f46e5" }}
+                  customLightSquareStyle={{ backgroundColor: "#e0e7ff" }}
+                  customDropSquareStyle={{ backgroundColor: "#fbbf24" }}
+                />
+
+                {/* Game Over Overlay */}
+                {showGameOverModal && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl z-10">
+                    <div className="bg-white rounded-2xl p-8 text-center max-w-sm mx-4">
+                      <div className="mb-4">
+                        <Trophy className="w-16 h-16 mx-auto text-yellow-500" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">Game Over!</h2>
+                      <p className="text-lg text-gray-600 mb-6">{winner}</p>
+                      <div className="flex items-center justify-center space-x-4 mb-6">
+                        <div className="text-center">
+                          <div className="flex items-center space-x-1 text-yellow-500 mb-1">
+                            <Star className="w-4 h-4" />
+                            <span className="font-bold">+50 XP</span>
+                          </div>
+                          <span className="text-xs text-gray-500">Experience</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center space-x-1 text-blue-500 mb-1">
+                            <Zap className="w-4 h-4" />
+                            <span className="font-bold">+15</span>
+                          </div>
+                          <span className="text-xs text-gray-500">Rating</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={restartGame}
+                          className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                        >
+                          Play Again
+                        </button>
+                        <button
+                          onClick={() => (window.location.href = "/dashboard")}
+                          className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                        >
+                          Dashboard
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Sidebar - Move History & Chat */}
+          <div className="xl:col-span-3 space-y-6">
+            <MoveHistory moves={moveHistory} currentMove={currentMoveIndex} onMoveClick={setCurrentMoveIndex} />
+
+            <EnhancedChat messages={chatMessages} onSendMessage={handleSendMessage} currentUser="You" />
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default App;
+export default GamePage
