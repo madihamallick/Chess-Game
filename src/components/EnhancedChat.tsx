@@ -48,7 +48,7 @@ const EnhancedChat: React.FC<EnhancedChatProps> = ({ messages, onSendMessage, cu
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg h-full flex flex-col">
+    <div className="bg-white rounded-2xl shadow-lg h-[20rem] flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
           <MessageCircle className="w-5 h-5 text-blue-600" />

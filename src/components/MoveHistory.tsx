@@ -31,7 +31,7 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentMove, onMoveCli
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-lg h-full">
+    <div className="bg-white rounded-2xl p-4 shadow-lg">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <History className="w-5 h-5 text-gray-600" />
@@ -47,7 +47,7 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentMove, onMoveCli
         </div>
       </div>
 
-      <div className="max-h-64 overflow-y-auto space-y-1">
+      <div className="h-[20rem] overflow-y-auto space-y-1">
         {moves.map((move, index) => (
           <div
             key={index}
@@ -70,14 +70,14 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ moves, currentMove, onMoveCli
             )}
           </div>
         ))}
-      </div>
 
       {moves.length === 0 && (
         <div className="text-center text-gray-500 py-8">
-          <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <History className="w-12 h-12 mx-auto mb-2 opacity-50 mt-20" />
           <p className="text-sm">No moves yet</p>
         </div>
       )}
+      </div>
     </div>
   )
 }
