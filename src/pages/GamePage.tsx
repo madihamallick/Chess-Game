@@ -1,32 +1,44 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { useParams } from "react-router-dom"
-import { Chessboard } from "react-chessboard"
-import { Chess } from "chess.js"
-import { detectOpening } from "../utils/detectOpening.ts"
-import GameTimer from "../components/GameTimer"
-import MoveHistory from "../components/MoveHistory"
-import EnhancedChat from "../components/EnhancedChat"
-import { ArrowLeft, Settings, Flag, RotateCcw, Handshake, Crown, Star, Zap, Trophy } from "lucide-react"
+import React from "react";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { Chessboard } from "react-chessboard";
+import { Chess } from "chess.js";
+import { detectOpening } from "../utils/detectOpening.ts";
+import GameTimer from "../components/GameTimer";
+import MoveHistory from "../components/MoveHistory";
+import EnhancedChat from "../components/EnhancedChat";
+import {
+  ArrowLeft,
+  Settings,
+  Flag,
+  RotateCcw,
+  Handshake,
+  Crown,
+  Star,
+  Zap,
+  Trophy,
+} from "lucide-react";
 
 const GamePage: React.FC = () => {
-  const { id } = useParams()
-  const gameId = id || "1"
+  const { id } = useParams();
+  const gameId = id || "1";
 
-  const [game, setGame] = useState(new Chess())
-  const [winner, setWinner] = useState<string | null>(null)
-  const [gameOver, setGameOver] = useState(false)
-  const [openingName, setOpeningName] = useState<string>("")
-  const [playerMode, setPlayerMode] = useState<"human" | "computer">("computer")
-  const [gameStarted, setGameStarted] = useState(false)
-  const [playerTurn, setPlayerTurn] = useState<"white" | "black">("white")
-  const [moveHistory, setMoveHistory] = useState<any[]>([])
-  const [currentMoveIndex, setCurrentMoveIndex] = useState(-1)
-  const [showGameOverModal, setShowGameOverModal] = useState(false)
+  const [game, setGame] = useState(new Chess());
+  const [winner, setWinner] = useState<string | null>(null);
+  const [gameOver, setGameOver] = useState(false);
+  const [openingName, setOpeningName] = useState<string>("");
+  const [playerMode, setPlayerMode] = useState<"human" | "computer">(
+    "computer"
+  );
+  const [gameStarted, setGameStarted] = useState(false);
+  const [playerTurn, setPlayerTurn] = useState<"white" | "black">("white");
+  const [moveHistory, setMoveHistory] = useState<any[]>([]);
+  const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
 
-  const [chatMessages, setChatMessages] = useState([
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       sender: "System",
@@ -34,101 +46,108 @@ const GamePage: React.FC = () => {
       timestamp: new Date(),
       type: "system" as const,
     },
-  ])
+  ]);
 
   function safeGameMutate(modify: (game: Chess) => void) {
     setGame((g) => {
-      const update = new Chess(g.fen())
-      modify(update)
-      return update
-    })
+      const update = { ...g };
+      modify(update);
+      return update;
+    });
   }
 
   function makeRandomMove() {
-    const possibleMoves = game.moves()
+    const possibleMoves = game.moves();
 
     if (game.game_over() || game.in_draw() || possibleMoves.length === 0) {
-      handleGameEnd()
-      return
+      handleGameEnd();
+      return;
     }
 
-    const randomIndex = Math.floor(Math.random() * possibleMoves.length)
+    const randomIndex = Math.floor(Math.random() * possibleMoves.length);
     safeGameMutate((game) => {
-      game.move(possibleMoves[randomIndex])
-    })
+      game.move(possibleMoves[randomIndex]);
+    });
 
-    setPlayerTurn(game.turn() === "w" ? "white" : "black")
-    updateMoveHistory()
+    setPlayerTurn(game.turn() === "w" ? "white" : "black");
+    updateMoveHistory();
   }
 
   function onDrop(source: string, target: string) {
-    if (gameOver) return false
+    if (gameOver) return false;
 
-    let move: any = null
+    let move: any = null;
     safeGameMutate((g) => {
-      move = g.move({ from: source, to: target, promotion: "q" })
-    })
+      move = g.move({ from: source, to: target, promotion: "q" });
+    });
 
-    if (move === null) return false
+    if (move === null) return false;
 
-    if (!gameStarted) setGameStarted(true)
+    if (!gameStarted) setGameStarted(true);
 
-    setPlayerTurn(game.turn() === "w" ? "white" : "black")
-    updateMoveHistory()
+    setPlayerTurn(game.turn() === "w" ? "white" : "black");
+    updateMoveHistory();
 
-    const moves = game.history()
-    setOpeningName(detectOpening(moves))
+    const moves = game.history();
+    setOpeningName(detectOpening(moves));
+    // setMoveHistory(game.history({ verbose: true }));
 
     if (game.game_over()) {
-      handleGameEnd()
-      return true
+      handleGameEnd();
+      return true;
     }
 
     if (playerMode === "computer") {
-      setTimeout(makeRandomMove, 500)
+      setTimeout(makeRandomMove, 500);
     }
 
-    return true
+    return true;
+  }
+
+  interface MoveHistory {
+    moveNumber: number;
+    white: string;
+    black: string;
+    evaluation: number;
   }
 
   function updateMoveHistory() {
-    const history = game.history({ verbose: true })
-    const formattedMoves = []
+    const history = game.history({ verbose: true });
+    const formattedMoves: MoveHistory[] = [];
 
     for (let i = 0; i < history.length; i += 2) {
-      const moveNumber = Math.floor(i / 2) + 1
-      const whiteMove = history[i]
-      const blackMove = history[i + 1]
+      const moveNumber = Math.floor(i / 2) + 1;
+      const whiteMove = history[i];
+      const blackMove = history[i + 1];
 
       formattedMoves.push({
         moveNumber,
         white: whiteMove?.san || "",
         black: blackMove?.san || "",
-        evaluation: Math.random() * 4 - 2, // Mock evaluation
-      })
+        evaluation: Math.random() * 4 - 2,
+      });
     }
 
-    setMoveHistory(formattedMoves)
-    setCurrentMoveIndex(formattedMoves.length - 1)
+    setMoveHistory(formattedMoves);
+    setCurrentMoveIndex(formattedMoves.length - 1);
   }
 
   function handleGameEnd() {
-    setGameOver(true)
-    setGameStarted(false)
+    setGameOver(true);
+    setGameStarted(false);
 
-    let result = "Draw"
+    let result = "Draw";
     if (game.in_checkmate()) {
-      result = game.turn() === "w" ? "Black wins!" : "White wins!"
+      result = game.turn() === "w" ? "Black wins!" : "White wins!";
     } else if (game.in_stalemate()) {
-      result = "Stalemate - Draw!"
+      result = "Stalemate - Draw!";
     } else if (game.insufficient_material()) {
-      result = "Insufficient material - Draw!"
+      result = "Insufficient material - Draw!";
     }
 
-    setWinner(result)
-    setShowGameOverModal(true)
+    setWinner(result);
+    setShowGameOverModal(true);
 
-    // Add system message
     setChatMessages((prev) => [
       ...prev,
       {
@@ -138,49 +157,70 @@ const GamePage: React.FC = () => {
         timestamp: new Date(),
         type: "system" as const,
       },
-    ])
+    ]);
   }
 
   function restartGame() {
-    const newGame = new Chess()
-    setGame(newGame)
-    setGameOver(false)
-    setGameStarted(false)
-    setWinner(null)
-    setOpeningName("")
-    setPlayerTurn("white")
-    setMoveHistory([])
-    setCurrentMoveIndex(-1)
-    setShowGameOverModal(false)
+    const newGame = new Chess();
+    setGame(newGame);
+    setGameOver(false);
+    setGameStarted(false);
+    setWinner(null);
+    setOpeningName("");
+    setPlayerTurn("white");
+    setMoveHistory([]);
+    setCurrentMoveIndex(-1);
+    setShowGameOverModal(false);
   }
 
+  type SystemMessage = {
+    id: string;
+    sender: string;
+    text: string;
+    timestamp: Date;
+    type: "system";
+  };
+
+  type UserMessage = {
+    id: string;
+    sender: string;
+    text: string;
+    timestamp: Date;
+    type: "emoji" | "message";
+  };
+
+  type ChatMessage = SystemMessage | UserMessage;
+
   function handleTimeUp() {
-    const winner = playerTurn === "white" ? "Black wins on time!" : "White wins on time!"
-    setWinner(winner)
-    setGameOver(true)
-    setShowGameOverModal(true)
+    const winner =
+      playerTurn === "white" ? "Black wins on time!" : "White wins on time!";
+    setWinner(winner);
+    setGameOver(true);
+    setShowGameOverModal(true);
   }
 
   function handleSendMessage(message: string) {
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        sender: "You",
-        text: message,
-        timestamp: new Date(),
-        type:
-          message.length === 1 &&
-          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(message)
-            ? ("emoji" as const)
-            : ("message" as const),
-      },
-    ])
+    if (!message.trim()) return;
+
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      sender: "You",
+      text: message,
+      timestamp: new Date(),
+      type:
+        message.length === 1 &&
+        /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(
+          message
+        )
+          ? "emoji"
+          : "message",
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]);
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -193,7 +233,9 @@ const GamePage: React.FC = () => {
                 <span>Back to Dashboard</span>
               </button>
               <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-xl font-bold text-gray-800">Game #{gameId}</h1>
+              <h1 className="text-xl font-bold text-gray-800">
+                Game #{gameId}
+              </h1>
             </div>
 
             <div className="flex items-center space-x-4">
@@ -212,24 +254,32 @@ const GamePage: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Game Mode Toggle */}
         <div className="flex justify-center mb-8">
           <div className="bg-white rounded-2xl p-2 shadow-sm">
             <div className="flex items-center space-x-4">
-              <span className="text-sm font-semibold text-gray-700">Game Mode:</span>
+              <span className="text-sm font-semibold text-gray-700">
+                Game Mode:
+              </span>
               <div className="relative">
                 <input
                   type="checkbox"
                   id="mode-toggle"
                   className="hidden"
                   checked={playerMode === "computer"}
-                  onChange={() => setPlayerMode(playerMode === "human" ? "computer" : "human")}
+                  onChange={() =>
+                    setPlayerMode(playerMode === "human" ? "computer" : "human")
+                  }
                 />
-                <label htmlFor="mode-toggle" className="flex items-center cursor-pointer">
+                <label
+                  htmlFor="mode-toggle"
+                  className="flex items-center cursor-pointer"
+                >
                   <div className="relative">
                     <div
                       className={`block w-14 h-8 rounded-full transition-colors duration-300 ${
-                        playerMode === "computer" ? "bg-blue-500" : "bg-gray-300"
+                        playerMode === "computer"
+                          ? "bg-blue-500"
+                          : "bg-gray-300"
                       }`}
                     ></div>
                     <div
@@ -248,18 +298,18 @@ const GamePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          {/* Left Sidebar - Timer & Controls */}
           <div className="xl:col-span-3 space-y-6">
             <GameTimer
-              initialTime={600} // 10 minutes
+              initialTime={600}
               isActive={gameStarted && !gameOver}
               onTimeUp={handleTimeUp}
               playerTurn={playerTurn}
             />
 
-            {/* Game Controls */}
             <div className="bg-white rounded-2xl p-4 shadow-lg">
-              <h3 className="font-semibold text-gray-800 mb-4">Game Controls</h3>
+              <h3 className="font-semibold text-gray-800 mb-4">
+                Game Controls
+              </h3>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={restartGame}
@@ -285,7 +335,6 @@ const GamePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Game Stats */}
             <div className="bg-white rounded-2xl p-4 shadow-lg">
               <h3 className="font-semibold text-gray-800 mb-4">Game Stats</h3>
               <div className="space-y-3 text-sm">
@@ -299,21 +348,26 @@ const GamePage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
-                  <span className={`font-semibold ${gameOver ? "text-red-600" : "text-green-600"}`}>
+                  <span
+                    className={`font-semibold ${
+                      gameOver ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
                     {gameOver ? "Game Over" : "In Progress"}
                   </span>
                 </div>
                 {winner && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Result:</span>
-                    <span className="font-semibold text-blue-600">{winner}</span>
+                    <span className="font-semibold text-blue-600">
+                      {winner}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Center - Chessboard */}
           <div className="xl:col-span-6">
             <div className="bg-white rounded-2xl p-6 shadow-lg">
               <div className="relative">
@@ -329,14 +383,15 @@ const GamePage: React.FC = () => {
                   customDropSquareStyle={{ backgroundColor: "#fbbf24" }}
                 />
 
-                {/* Game Over Overlay */}
                 {showGameOverModal && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl z-10">
                     <div className="bg-white rounded-2xl p-8 text-center max-w-sm mx-4">
                       <div className="mb-4">
                         <Trophy className="w-16 h-16 mx-auto text-yellow-500" />
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-800 mb-2">Game Over!</h2>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Game Over!
+                      </h2>
                       <p className="text-lg text-gray-600 mb-6">{winner}</p>
                       <div className="flex items-center justify-center space-x-4 mb-6">
                         <div className="text-center">
@@ -344,7 +399,9 @@ const GamePage: React.FC = () => {
                             <Star className="w-4 h-4" />
                             <span className="font-bold">+50 XP</span>
                           </div>
-                          <span className="text-xs text-gray-500">Experience</span>
+                          <span className="text-xs text-gray-500">
+                            Experience
+                          </span>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center space-x-1 text-blue-500 mb-1">
@@ -375,16 +432,23 @@ const GamePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Sidebar - Move History & Chat */}
           <div className="xl:col-span-3 space-y-6">
-            <MoveHistory moves={moveHistory} currentMove={currentMoveIndex} onMoveClick={setCurrentMoveIndex} />
+            <MoveHistory
+              moves={moveHistory}
+              currentMove={currentMoveIndex}
+              onMoveClick={setCurrentMoveIndex}
+            />
 
-            <EnhancedChat messages={chatMessages} onSendMessage={handleSendMessage} currentUser="You" />
+            <EnhancedChat
+              messages={chatMessages}
+              onSendMessage={handleSendMessage}
+              currentUser="You"
+            />
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default GamePage
+export default GamePage;

@@ -74,7 +74,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 justify-around">
         {user.achievements.slice(0, 4).map((achievement, index) => (
           <div key={index} className="bg-yellow-400/20 rounded-lg p-2">
             <Medal className="w-6 h-6 text-yellow-400" />

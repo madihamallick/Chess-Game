@@ -24,7 +24,6 @@ const Dashboard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState("play");
 
-  // Mock user data
   const currentUser = {
     name: "ChessPlayer",
     avatar: "/images/profile.webp",
@@ -79,7 +78,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -100,14 +98,11 @@ const Dashboard: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar - User Profile */}
           <div className="lg:col-span-1">
             <UserProfile user={currentUser} />
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
-            {/* Navigation Tabs */}
             <div className="bg-white rounded-2xl shadow-sm mb-8">
               <div className="flex space-x-1 p-1 flex-wrap">
                 {tabs.map((tab) => (
@@ -127,7 +122,6 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Tab Content */}
             {activeTab === "play" && (
               <div className="space-y-8">
                 <div>
